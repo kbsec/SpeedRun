@@ -1,0 +1,89 @@
+#include <windows.h>
+#include <iostream> 
+#include <string> 
+#include <unordered_map>
+
+
+typedef void PluginAction(void);
+typedef char* PluginName(void);
+
+struct Plugin{
+    FARPROC dllName;
+    FARPROC dllAction;
+    HMODULE hModule; 
+};
+
+
+auto sPluginx =  sizeof(Plugin);
+
+char SayHelloName[] = "SayHello";
+void SayHello(){
+    MessageBoxA(NULL, "Hello!", "world!", MB_OK);
+    return;
+
+}
+
+// Modularity: 
+// 1 file that contains core functionality
+// Then possibly many exes that contain plugins/extra functionality not necessarily implemented 
+// in the the core executable 
+
+
+FARPROC LoadPlugin(char* dllName , UINT_PTR *blah ){
+    std::string basePath = "./plugins/";
+    basePath  += std::string(dllName);
+    std::cout<< basePath <<std::endl;
+
+    HMODULE hModuel  = LoadLibraryA(basePath.c_str());
+    *blah =  (UINT_PTR) hModuel;
+    if (hModuel ==NULL){
+        std::cout << "Failed to get Lib because of "<< ::GetLastError() <<std::endl;
+        return NULL;
+    }
+    PluginName* plgName = (PluginName* ) GetProcAddress(hModuel, "Name");
+    char* funcName = plgName();
+    std::cout << "Our new function is ..." << funcName << std::endl;
+    return GetProcAddress(hModuel, "Action");
+
+}
+
+void UnloadPLugin(){}
+
+
+int main(int argc, char* argv[]){
+    //char dllName[] ="saygoodbye.dll";
+    //PluginAction* dllAction = (PluginAction*) LoadPlugin(dllName);
+    //dllAction();
+     std::unordered_map<std::string, Plugin*> pluginTable = {};
+
+    UINT_PTR loadedModuel = NULL;
+    if (argc ==1){
+        std::cout<< "invalid number of args" <<std::endl;
+        return 0 ;
+    }
+    if (strcmp(argv[1],SayHelloName) ==0 ){
+        SayHello();
+        return 0;
+    } else if(strcmp(argv[1],"LoadModule") ==0 ){
+        if (argc < 3){
+            std::cout << "No plugin listed!" << std::endl;
+            return 0;
+        }
+        // 3rd argument, specifying the dll name 
+        char *dllName = argv[2];
+        PluginAction* dllAction = (PluginAction*) LoadPlugin(dllName, &loadedModuel);
+        dllAction();
+        FreeLibrary((HMODULE) loadedModuel);
+        
+
+    } else{
+        std::cout<< "I dont know what this is!" <<std::endl;
+    } 
+    std::cout << "Goodbye!" << std::endl;
+    return 0;
+}
+
+
+/*
+
+*/
